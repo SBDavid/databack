@@ -32,14 +32,21 @@ def calculate_portfolio_returns(
     ndx_returns = ndx_data['收盘价'].pct_change()
     
     # 债券的日收益率（假设年化3%）
-    daily_bond_return = (1 + 0.03) ** (1/252) - 1
+    daily_bond_return = pd.Series((1 + 0.03) ** (1/252) - 1, index=bond_weights.index)
     
     # 计算组合收益
     portfolio_returns = ndx_returns * ndx_weights + daily_bond_return * bond_weights
     portfolio_returns = portfolio_returns.fillna(0)
     
+    # 检查长度和索引
+    # print(f"Length of portfolio_returns: {len(portfolio_returns)}")
+    # print(f"Length of ndx_returns: {len(ndx_returns)}")
+    # print(f"Index of portfolio_returns: {portfolio_returns.index}")
+    # print(f"Index of ndx_returns: {ndx_returns.index}")
+    
     # 计算beta
     market_var = np.var(ndx_returns)
+    
     portfolio_covar = np.cov(portfolio_returns, ndx_returns)[0][1]
     beta = portfolio_covar / market_var if market_var != 0 else 1
     
@@ -105,6 +112,9 @@ def balanced_strategy(df: pd.DataFrame) -> pd.DataFrame:
             })
         else:
             results.append(results[-1].copy())
+    
+    # 打印results的size
+    print(f"Length of results: {len(results)}")
     
     return pd.DataFrame(results)
 
