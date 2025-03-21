@@ -111,7 +111,9 @@ def balanced_strategy(df: pd.DataFrame) -> pd.DataFrame:
                 'bond_weight': 0.5
             })
         else:
-            results.append(results[-1].copy())
+            copy = results[-1].copy()
+            copy['date'] = date
+            results.append(copy)
     
     # 打印results的size
     print(f"Length of results: {len(results)}")
@@ -135,8 +137,8 @@ def generate_report(df: pd.DataFrame) -> None:
     
     # 计算每个策略的月度统计数据
     strategies = {
-        '网格交易': grid_results,
-        '股债平衡': balanced_results,
+        # '网格交易': grid_results,
+        # '股债平衡': balanced_results,
         '买入持有': hold_results
     }
     
