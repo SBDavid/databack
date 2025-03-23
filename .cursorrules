@@ -5,6 +5,7 @@
 2. 按月给出一个表格，表格的每一行是当月的数据，包括当月投资组合的涨幅、纳斯达克100的涨跌幅、投资组合的贝塔、投资组合的净值。
 3. 这个表格中需要对比三种投资策略的结果，他们分别是纳斯达克100网格交易、纳斯达克100股债平衡、纳斯达克100持有10年
 4. 以 markdown 格式输出这份表格，文件路径为 ./report.md
+5. beta 系数的计算方法：https://corporatefinanceinstitute.com/resources/data-science/beta-coefficient/
 
 # 数据
 ## 纳斯达克100

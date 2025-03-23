@@ -10,6 +10,16 @@ def load_and_process_data(file_path: str) -> pd.DataFrame:
     df.set_index('交易日期', inplace=True)
     return df
 
+# 计算 beta
+def calculate_beta(rm_data: pd.Series, re_data: pd.Series) -> pd.Series:
+    # 市场的日收益率
+    rm_returns = rm_data.pct_change().fillna(0)
+    # 组合的收益率
+    re_returns = re_data.pct_change().fillna(0)
+    # 计算纳斯达克100的beta系数
+    beta = rm_returns.cov(re_returns) / rm_returns.var()
+    return beta
+
 def calculate_portfolio_values(
     initial_portfolio_value: float,
     ndx_data: pd.DataFrame,
@@ -49,7 +59,7 @@ def calculate_portfolio_values(
         # 计算当日净值
         portfolio_values.iloc[i] = prev_value * (1.0 + ndx_return * ndx_weights.iloc[i] + bond_return * bond_weights.iloc[i])
     
-    return portfolio_values
+    return portfolio_values, calculate_beta(ndx_data['收盘价'], portfolio_values)
 
 def grid_trading_strategy(df: pd.DataFrame) -> pd.DataFrame:
     """实现网格交易策略"""
@@ -116,6 +126,19 @@ def balanced_strategy(df: pd.DataFrame) -> pd.DataFrame:
             copy = results[-1].copy()
             copy['date'] = date
             results.append(copy)
+            
+            # 计算纳斯达克的涨跌幅
+            ndx_return = df.iloc[i]['收盘价'] / df.iloc[i-1]['收盘价'] - 1
+            
+            # 根据纳斯达克的涨跌幅调整比例
+            ndx_weight = results[-1]['ndx_weight'] * (1 + ndx_return)
+            bond_weight = 1 - ndx_weight  # 保持总比例为1
+            
+            results.append({
+                'date': date,
+                'ndx_weight': ndx_weight,
+                'bond_weight': bond_weight
+            })
     
     return pd.DataFrame(results)
 
@@ -144,7 +167,7 @@ def generate_report(df: pd.DataFrame, initial_portfolio_value: float) -> None:
     monthly_stats = []
     
     for name, strategy_df in strategies.items():
-        returns = calculate_portfolio_values(initial_portfolio_value, df, strategy_df)
+        returns, beta = calculate_portfolio_values(initial_portfolio_value, df, strategy_df)
         # 确保数据有正确的索引
         strategy_df_copy = strategy_df.copy()
         if not isinstance(strategy_df_copy.index, pd.DatetimeIndex):
@@ -171,12 +194,13 @@ def generate_report(df: pd.DataFrame, initial_portfolio_value: float) -> None:
                 '策略': f'{name}-{ndx_weight}',
                 'pe': ndx_monthly.loc[date, '市盈率TTM'],
                 '组合当月收益率': f"{ret * 100:.2f}%",  # 将变化率转换为百分比
-                '组合当月净值': f"{monthly_end_values[date]:.2f}",
+                # '组合当月净值': f"{monthly_end_values[date]:.2f}",
                 '纳斯达克当月收益率': f"{ndx_monthly_pct[date] * 100 if date in ndx_monthly_pct.index else 0:.2f}%",
-                '纳斯达克当月净值': f"{ndx_monthly.loc[date, '收盘价']:.2f}",
-                '每月差值': f"{(ndx_monthly_pct[date] * 100 if date in ndx_monthly_pct.index else 0) * ndx_weight - ret * 100:.2f}%",
-                '组合累计收益率': f"{monthly_end_values[date] / initial_portfolio_value * 100:.2f}%",
-                '纳斯达克累计收益率': f"{ndx_monthly.loc[date, '收盘价']/df['收盘价'][0] * 100:.2f}%",
+                # '纳斯达克当月净值': f"{ndx_monthly.loc[date, '收盘价']:.2f}",
+                # '每月差值': f"{(ndx_monthly_pct[date] * 100 if date in ndx_monthly_pct.index else 0) * ndx_weight - ret * 100:.2f}%",
+                'beta': beta,
+                '组合累计收益率': f"{(monthly_end_values[date] / initial_portfolio_value - 1) * 100:.2f}%",
+                '纳斯达克累计收益率': f"{(ndx_monthly.loc[date, '收盘价']/df['收盘价'][0] - 1) * 100:.2f}%",
             })
     
         # 生成报告
